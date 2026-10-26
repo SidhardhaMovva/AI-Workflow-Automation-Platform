@@ -1,0 +1,12 @@
+services:
+  workflow-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - WORKFLOW_DB_PATH=/srv/app/workflow_runs.db
+    volumes:
+      - workflow-data:/srv/app
+
+volumes:
+  workflow-data:

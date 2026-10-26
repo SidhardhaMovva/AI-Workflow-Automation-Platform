@@ -1,0 +1,55 @@
+name: document-triage
+description: >
+  Classify an incoming support message with an LLM step, hold high-priority
+  items for human approval, then route by category.
+
+steps:
+  - id: classify
+    type: llm
+    config:
+      provider: mock
+      parse_json: true
+      prompt: "Classify and triage this support message: {inputs.text}"
+
+  - id: is_billing
+    type: condition
+    depends_on: [classify]
+    config:
+      field: classify.category
+      operator: equals
+      value: billing
+
+  - id: is_high_priority
+    type: condition
+    depends_on: [classify]
+    config:
+      field: classify.priority
+      operator: equals
+      value: high
+
+  - id: urgent_review
+    type: human_approval
+    depends_on: [is_high_priority]
+    run_if: {step: is_high_priority, equals: true}
+    config:
+      message: "High-priority item: approve before it is routed"
+
+  - id: route_billing
+    type: transform
+    depends_on: [is_billing, urgent_review]
+    run_if: {step: is_billing, equals: true}
+    config:
+      mapping:
+        queue: "billing-team"
+        category: "{classify.category}"
+        priority: "{classify.priority}"
+
+  - id: route_general
+    type: transform
+    depends_on: [is_billing, urgent_review]
+    run_if: {step: is_billing, equals: false}
+    config:
+      mapping:
+        queue: "general-support"
+        category: "{classify.category}"
+        priority: "{classify.priority}"

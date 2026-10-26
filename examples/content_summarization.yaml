@@ -1,0 +1,29 @@
+name: content-summarization
+description: >
+  Prepare a document (normalize whitespace/metadata), summarize it with an
+  LLM step, and package the result for downstream use.
+
+steps:
+  - id: prepare
+    type: transform
+    config:
+      mapping:
+        title: "{inputs.title}"
+        word_count: "{inputs.word_count}"
+        document: "{inputs.text}"
+
+  - id: summarize
+    type: llm
+    depends_on: [prepare]
+    config:
+      provider: mock
+      prompt: "Summarize the following document: {prepare.document}"
+
+  - id: package
+    type: transform
+    depends_on: [summarize]
+    config:
+      mapping:
+        title: "{prepare.title}"
+        summary: "{summarize}"
+        status: "summarized"
